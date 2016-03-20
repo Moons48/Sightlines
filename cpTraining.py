@@ -72,67 +72,166 @@ def main():
      #   name = bottom10(**arguments)
 
 @command
-@annotate(output = 'o', email = 'e')
-@kwoargs("output", "email") #keyword only arguments        
-def TechRating(school, output=None, email=None):
-    """Retrieves a schools density.
+@annotate(output='o', email='e', outputpeers = 'p', emaildoc = 'd') #bottom10 = "b")
+@kwoargs("output", "email", "outputpeers", "emaildoc")#, "bottom10") #keyword only arguemnts #Can I elimiate the =STR part yet?
+def techRating(school, output=None, email=None, outputpeers =None, emaildoc=None): #bottom10=None): #How do I specify an email?
+    """Retrieves a school's TechRating (-h for more options).
 
         school: Name of school whose data you want (required)
 
-        output: Creates a csv file with requested data (optional)
+        output: Creates a csv file with requested data
 
-        outputpeers: Creates a csv file with requested data and school peer group (optional)
+        outputpeers: Creates a csv file with requested data and school peer group
 
-        email: Sends email of requested data (optional)
+        email: Sends email of requested data (email address required)
 
-        emaildoc: Sends the attachment of your results to desired email (optional)
+        emaildoc: Sends the attachment of your results to desired email (email address required)
+
     """
-    
     try:
-        global connection
         cursor = connection.cursor()
         cursor.execute("select techrating from slschools where campusname = %s",(school,))
         connection.commit()
         result = cursor.fetchone()
-        print "The tech rating for %s is %s"%(school, result[0])
-
+        print school, result[0]
+        average()
+        highest()
+        lowest()
     except TypeError:
-        print "is not found! \nUse the catalog or find command to identify the correct name of your school"
+        print "Not found! \nUse the catalog or find command to identify the correct name of your school"
 
+    
     if output is not None:
-        filename = "TechRatingResults"+school+".csv"
-        outputFile = open(filename, "w") #Don't forget the newline=""!!!!
-        outputWriter = csv.writer(outputFile)
-        outputWriter.writerow([school, result])
-     
+        try:
+            #output(school)
+            filename = "TechRatingResults_"+school+".csv"
+            outputFile = open(filename, "w") #Don't forget the newline=""!!!!
+            outputWriter = csv.writer(outputFile)
+            outputWriter.writerow(["School", "TechRating"])
+            outputWriter.writerow([school, result[0]])
+            print "Newly created file: " + filename
+        except TypeError:
+            return ""
+    
+    if outputpeers is not None: #This works now! Still need it to not have to put the school in again....
+        try:
+            cursor = connection.cursor()
+            cursor.execute("select peergroup from slschools where campusname = %s",(school,))
+            connection.commit()
+            pgroup1 = cursor.fetchone()
+            pgroup = pgroup1[0]
+            cursor.execute("select campusname, techrating from slschools where peergroup = %s",(pgroup,))
+            connection.commit()
+            pgresults1 = cursor.fetchall()
+            filename = "ResultsVsPeers_"+ school +".csv"
+            outputfile = open(filename, "w")
+            outputWriter = csv.writer(outputfile, delimiter = ",")
+            outputWriter.writerow(["School", "TechRating"])
+            for school, techrating in pgresults1:
+                outputWriter.writerow([school, techrating])
+            print filename
+        except TypeError:
+            return ""
+
     if email is not None:
-        smtpObj = smtplib.SMTP("smtp.gmail.com",587)
-        smtpObj.ehlo()
-        smtpObj.starttls()
-        smtpObj.login('sightlinespython@gmail.com', 'Meat4848')
-        print ("Connection Successful")
-        content= "Hey There,\nThe Tech Rating of %s is %s. Isn't this stuff crazy?"%(school, result[0])
-        smtpObj.sendmail('sightlinespython@gmail.com', 'Smooney48@gmail.com',
-            'Subject: Search Results!\n%s'%(content))
-        smtpObj.quit()
-        print ("Email sent")
+        try:
+            smtpObj = smtplib.SMTP("smtp.gmail.com",587)
+            smtpObj.ehlo()
+            smtpObj.starttls()
+            smtpObj.login('sightlinespython@gmail.com', 'Meat4848')
+            print ("Connection Successful")
+            content= "Hey There,\nThe techrating of %s is %s. Isn't this stuff crazy?"%(school, result[0])
+            smtpObj.sendmail('sightlinespython@gmail.com', email,
+                'Subject: Search Results.\n%s'%(content))
+            smtpObj.quit()
+            print ("Email sent")
+        except TypeError:
+            return " "
+
+
+    if emaildoc is not None:
+        try:
+
+            cursor = connection.cursor()
+            cursor.execute("select peergroup from slschools where campusname = %s",(school,))
+            connection.commit()
+            pgroup1 = cursor.fetchone()
+            pgroup = pgroup1[0]
+            cursor.execute("select campusname, techrating from slschools where peergroup = %s",(pgroup,))
+            connection.commit()
+            pgresults1 = cursor.fetchall()
+            filename = "ResultsVsPeers_"+school+".csv"
+            outputfile = open(filename, "w")
+            outputWriter = csv.writer(outputfile, delimiter = ",")
+            outputWriter.writerow(["School", "TechRating"])
+            for schools, techrating in pgresults1:
+                outputWriter.writerow([schools, techrating])
+            #FIXME do I need to somehow halt the program and let it restart before calling this?
+            emailfrom = "sightlinespython@gmail.com"
+            emailto = "smooney48@gmail.com"
+            fileToSend = filename
+            username = "sightlinespython@gmail.com"
+            password = "Meat4848"
+
+            msg = MIMEMultipart()
+            msg["From"] = emailfrom
+            msg["To"] = emailto
+            content = "Hey there"
+            msg["Subject"] = "The requested document is attached"
+            msg.preamble = "The requested document is attached"
+
+            ctype, encoding = mimetypes.guess_type(fileToSend)
+            if ctype is None or encoding is not None:
+                ctype = "application/octet-stream"
+
+            maintype, subtype = ctype.split("/", 1)
+
+            fp = open(fileToSend, "rb")
+            attachment = MIMEBase(maintype, subtype)
+            attachment.set_payload(fp.read())
+            fp.close()
+            encoders.encode_base64(attachment)
+            attachment.add_header("Content-Disposition", "attachment", filename=fileToSend)
+            msg.attach(attachment)
+
+            server = smtplib.SMTP("smtp.gmail.com:587")
+            server.starttls()
+            server.login(username,password)
+            server.sendmail(emailfrom, emailto, msg.as_string())
+            server.quit()
+
+        except TypeError:
+            print ""
+
+    """if bottom10 is not None: 
+        try:
+            cursor = connection.cursor()
+            cursor.execute("SELECT * FROM slschools ORDER BY density ASC LIMIT 10",) #
+            connection.commit()
+            result = cursor.fetchall()
+            print "\n---Here are your Bottom 10 Schools!---\n" #%percentage
+            for key in result:
+                print key[0], key[1]  
+        except TypeError:
+            """
 
 
 @command
-@annotate(output='o', email='e', outputpeers = 'op', emaildoc = 'ed')
+@annotate(output='o', email='e', outputpeers = 'p', emaildoc = 'd')#, bottom10 = 'b')
 @kwoargs("output", "email", "outputpeers", "emaildoc") #keyword only arguemnts #Can I elimiate the =STR part yet?
-def density(school, output=None, email=None, outputpeers =None, emaildoc=None): #How do I specify an email?
-    """Retrieves a schools density.
+def density(school, output=None, email=None, outputpeers =None, emaildoc=None):#, bottom10=None): #How do I specify an email?
+    """Retrieves a school's density (-h for more options).
 
         school: Name of school whose data you want (required)
 
-        output: Creates a csv file with requested data (optional)
+        output: Creates a csv file with requested data
 
-        outputpeers: Creates a csv file with requested data and school peer group (optional)
+        outputpeers: Creates a csv file with requested data and school peer group
 
-        email: Sends email of requested data (optional)
+        email: Sends email of requested data (email address required)
 
-        emaildoc: Sends the attachment of your results to desired email (optional)
+        emaildoc: Sends the attachment of your results to desired email (email address required)
+
     """
 
     try:
@@ -145,7 +244,7 @@ def density(school, output=None, email=None, outputpeers =None, emaildoc=None): 
         highest()
         lowest()
     except TypeError:
-        print "Not found! \nUse the catalog or finder command to identify the correct name of your school"
+        print "Not found! \nUse the catalog or find command to identify the correct name of your school"
 
     
     if output is not None:
@@ -210,6 +309,7 @@ def density(school, output=None, email=None, outputpeers =None, emaildoc=None): 
             filename = "ResultsVsPeers_"+school+".csv"
             outputfile = open(filename, "w")
             outputWriter = csv.writer(outputfile, delimiter = ",")
+            outputWriter.writerow(["School", "Density"])
             for schools, density in pgresults1:
                 outputWriter.writerow([schools, density])
             #FIXME do I need to somehow halt the program and let it restart before calling this?
@@ -249,6 +349,19 @@ def density(school, output=None, email=None, outputpeers =None, emaildoc=None): 
         except TypeError:
             print ""
 
+    """if bottom10 is not None: 
+        try:
+            cursor = connection.cursor()
+            cursor.execute("SELECT * FROM slschools ORDER BY density ASC LIMIT 10",) #
+            connection.commit()
+            result = cursor.fetchall()
+            print "\n---Here are your Bottom 10 Schools!---\n" #%percentage
+            for key in result:
+                print key[0], key[1]
+        except TypeError:"""        
+
+
+
 @command
 def catalog():
     #Dont need to reference global if you arent assigning new value to variable
@@ -277,17 +390,7 @@ def find(school):
         print key[0]
  
 @command
-def bottom10(count='10'):
-    """Yields the bottom 10 schools of chosen metric.
 
-    """
-    cursor = connection.cursor()
-    cursor.execute("SELECT * FROM slschools ORDER BY density ASC LIMIT 10",) #
-    connection.commit()
-    result = cursor.fetchall()
-    print "\n---Here are your Bottom 10 Schools!---\n" #%percentage
-    for key in result:
-        print key[0], key[1]
 
 
 def average():
@@ -324,6 +427,8 @@ def highest():
     dens_num1 = cursor.fetchone()
     dens_num = dens_num1[0]
     print "The school in the database with the highest density is %s with %s"% (school, dens_num)
+
+#def
 
 def basic_density(school): #How do I specify an email?
     global connection
