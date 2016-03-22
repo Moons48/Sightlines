@@ -1,25 +1,17 @@
 """What I need to work on:
 
-    -How can I make it so the average displays whatever the average of the metric  you want?
-        Put the metric within the parameters? Did not work.
+    -Putting parameters within the average, highest, lowest, etc. function.
+        I have them written to say density or tech rating. I want it to be variable
     -Is there a way to add a way to input emails if you what?
         -The default=0 thing could be modified to if 
-    -Work on the headers for the csv output files
-    -I need to start working on importing modules... This is getting crowded.
-        If I have modules imported in other programs, do I need to import them here?
+    -Making this less crowded...
     -How do I put a heading on the program within bash
-    -How can I have functions with multiple command options?
-        -Say I want to be able to create a document and choose to email the document
-            Looks like you can already do that...
+        -Similar to how the ArgParser allows you to have an intro title
+    -The rankings command does not work for tech rating
+    -Is there a way to show a school's ranking? Row number?
 
+    -Talk about storyboarding outline
 
-
-    connecting attachment to an email
-    being able to enter specific emails after the -e argument
-    help with the finder code
-    Have it list a bunch of statistics about the school's factor in question
-    Have the highest and lowest metrics show the name of the school and the density
-    Ask about top10 SQL statements!
     """
 import SightlinesClasses
 import argparse
@@ -59,7 +51,7 @@ def main():
 
 @command
 @annotate(output='o', email='e', outputpeers = 'p', emaildoc = 'd', rankings = '-r') #bottom10 = "b")
-@kwoargs("output", "email", "outputpeers", "emaildoc")#, "bottom10") #keyword only arguemnts #Can I elimiate the =STR part yet?
+@kwoargs("output", "email", "outputpeers", "emaildoc","rankings")#, "bottom10") #keyword only arguemnts #Can I elimiate the =STR part yet?
 def techrating(school, output=None, email=None, outputpeers =None, emaildoc=None, rankings=None): #bottom10=None): #How do I specify an email?
     """Retrieves a school's TechRating (-h for more options).
 
