@@ -1,19 +1,16 @@
 """What I need to work on:
-    -The finder function only works when I enter text. How do I make it work with a %?
-        -Show the Boston example
-    -SQL commands to get top/lowest %'s
+
     -How can I make it so the average displays whatever the average of the metric  you want?
         Put the metric within the parameters? Did not work.
     -Is there a way to add a way to input emails if you what?
         -The default=0 thing could be modified to if 
-    -Work on the top 10% reports
     -Work on the headers for the csv output files
     -I need to start working on importing modules... This is getting crowded.
         If I have modules imported in other programs, do I need to import them here?
     -How do I put a heading on the program within bash
     -How can I have functions with multiple command options?
         -Say I want to be able to create a document and choose to email the document
-            Looks like you can already fucking do that!s
+            Looks like you can already do that...
 
 
 
@@ -60,21 +57,10 @@ def main():
     arguments = vars(arguments) #Converts the namespace directory into a dictionary
     command = arguments.pop("command")#removes and returns command item added earlier
 
-    #if command == "density":
-    #  school = density(**arguments) #This unpacks the items from the dictionary
-    #if command == "TechRating":
-     #   name = TechRating(**arguments)
-    #elif command == "catalog":
-     #   name = catalog(**arguments)
-    #elif command == "find":
-     #   name = find(**arguments)
-    #elif command == "bottom10":
-     #   name = bottom10(**arguments)
-
 @command
-@annotate(output='o', email='e', outputpeers = 'p', emaildoc = 'd') #bottom10 = "b")
+@annotate(output='o', email='e', outputpeers = 'p', emaildoc = 'd', rankings = '-r') #bottom10 = "b")
 @kwoargs("output", "email", "outputpeers", "emaildoc")#, "bottom10") #keyword only arguemnts #Can I elimiate the =STR part yet?
-def techRating(school, output=None, email=None, outputpeers =None, emaildoc=None): #bottom10=None): #How do I specify an email?
+def techrating(school, output=None, email=None, outputpeers =None, emaildoc=None, rankings=None): #bottom10=None): #How do I specify an email?
     """Retrieves a school's TechRating (-h for more options).
 
         school: Name of school whose data you want (required)
@@ -87,20 +73,35 @@ def techRating(school, output=None, email=None, outputpeers =None, emaildoc=None
 
         emaildoc: Sends the attachment of your results to desired email (email address required)
 
+        rankings: Ranks TechRating in descending order
+
     """
     try:
         cursor = connection.cursor()
         cursor.execute("select techrating from slschools where campusname = %s",(school,))
         connection.commit()
         result = cursor.fetchone()
-        print school, result[0]
-        average()
-        highest()
-        lowest()
+        print "%s has a Tech Rating of %s"%(school, result[0])
+        #average()
+        #highest()
+        #lowest()
     except TypeError:
         print "Not found! \nUse the catalog or find command to identify the correct name of your school"
 
-    
+
+
+    if rankings is not None:
+        try:
+            cursor = connection.cursor()
+            cursor.execute("select campusname, techrating, RANK() over(order by techrating desc) from slschools",)
+            connection.commit()
+            rank = cursor.fetchall()
+            for school in rank:
+                print school[0], school[1], school[2]
+        except TypeError:
+            print "Not found! \nUse the catalog or find command to identify the correct name of your school"
+
+
     if output is not None:
         try:
             #output(school)
@@ -129,7 +130,7 @@ def techRating(school, output=None, email=None, outputpeers =None, emaildoc=None
             outputWriter.writerow(["School", "TechRating"])
             for school, techrating in pgresults1:
                 outputWriter.writerow([school, techrating])
-            print filename
+            print "Newly created file: ", filename
         except TypeError:
             return ""
 
@@ -163,7 +164,7 @@ def techRating(school, output=None, email=None, outputpeers =None, emaildoc=None
             filename = "ResultsVsPeers_"+school+".csv"
             outputfile = open(filename, "w")
             outputWriter = csv.writer(outputfile, delimiter = ",")
-            outputWriter.writerow(["School", "TechRating"])
+            #outputWriter.writerow(["School", "TechRating"])
             for schools, techrating in pgresults1:
                 outputWriter.writerow([schools, techrating])
             #FIXME do I need to somehow halt the program and let it restart before calling this?
@@ -203,23 +204,11 @@ def techRating(school, output=None, email=None, outputpeers =None, emaildoc=None
         except TypeError:
             print ""
 
-    """if bottom10 is not None: 
-        try:
-            cursor = connection.cursor()
-            cursor.execute("SELECT * FROM slschools ORDER BY density ASC LIMIT 10",) #
-            connection.commit()
-            result = cursor.fetchall()
-            print "\n---Here are your Bottom 10 Schools!---\n" #%percentage
-            for key in result:
-                print key[0], key[1]  
-        except TypeError:
-            """
-
 
 @command
-@annotate(output='o', email='e', outputpeers = 'p', emaildoc = 'd')#, bottom10 = 'b')
-@kwoargs("output", "email", "outputpeers", "emaildoc") #keyword only arguemnts #Can I elimiate the =STR part yet?
-def density(school, output=None, email=None, outputpeers =None, emaildoc=None):#, bottom10=None): #How do I specify an email?
+@annotate(output='o', email='e', outputpeers = 'p', emaildoc = 'd', rankings='r')#, bottom10 = 'b')
+@kwoargs("output", "email", "outputpeers", "emaildoc", "rankings") #keyword only arguemnts #Can I elimiate the =STR part yet?
+def density(school, output=None, email=None, outputpeers =None, emaildoc=None, rankings=None):#, bottom10=None): #How do I specify an email?
     """Retrieves a school's density (-h for more options).
 
         school: Name of school whose data you want (required)
@@ -232,21 +221,35 @@ def density(school, output=None, email=None, outputpeers =None, emaildoc=None):#
 
         emaildoc: Sends the attachment of your results to desired email (email address required)
 
-    """
+        rankings: Ranks density in decreasing order
 
+    """
     try:
         cursor = connection.cursor()
         cursor.execute("select density from slschools where campusname = %s",(school,))
         connection.commit()
         result = cursor.fetchone()
-        print school, result[0]
+        print "%s has a density of %s"%(school, result[0])
         average()
         highest()
         lowest()
+        topTenDensity()
+        bottomTenDensity()
     except TypeError:
         print "Not found! \nUse the catalog or find command to identify the correct name of your school"
 
     
+    if rankings is not None:
+        try:
+            cursor = connection.cursor()
+            cursor.execute("select campusname, density, RANK() over(order by density desc) from slschools",)
+            connection.commit()
+            rank = cursor.fetchall()
+            for school in rank:
+                print school[0], school[1], school[2]
+        except TypeError:
+         print "Not found! \nUse the catalog or find command to identify the correct name of your school"
+
     if output is not None:
         try:
             #output(school)
@@ -294,10 +297,8 @@ def density(school, output=None, email=None, outputpeers =None, emaildoc=None):#
         except TypeError:
             return " "
 
-
     if emaildoc is not None:
         try:
-
             cursor = connection.cursor()
             cursor.execute("select peergroup from slschools where campusname = %s",(school,))
             connection.commit()
@@ -313,6 +314,7 @@ def density(school, output=None, email=None, outputpeers =None, emaildoc=None):#
             for schools, density in pgresults1:
                 outputWriter.writerow([schools, density])
             #FIXME do I need to somehow halt the program and let it restart before calling this?
+            
             emailfrom = "sightlinespython@gmail.com"
             emailto = "smooney48@gmail.com"
             fileToSend = filename
@@ -326,7 +328,7 @@ def density(school, output=None, email=None, outputpeers =None, emaildoc=None):#
             msg["Subject"] = "The requested document is attached"
             msg.preamble = "The requested document is attached"
 
-            ctype, encoding = mimetypes.guess_type(fileToSend)
+            ctype, encoding = mimetypes.guess_type(filename)
             if ctype is None or encoding is not None:
                 ctype = "application/octet-stream"
 
@@ -349,18 +351,7 @@ def density(school, output=None, email=None, outputpeers =None, emaildoc=None):#
         except TypeError:
             print ""
 
-    """if bottom10 is not None: 
-        try:
-            cursor = connection.cursor()
-            cursor.execute("SELECT * FROM slschools ORDER BY density ASC LIMIT 10",) #
-            connection.commit()
-            result = cursor.fetchall()
-            print "\n---Here are your Bottom 10 Schools!---\n" #%percentage
-            for key in result:
-                print key[0], key[1]
-        except TypeError:"""        
-
-
+   
 
 @command
 def catalog():
@@ -370,7 +361,7 @@ def catalog():
     cursor.execute("select * from slschools order by campusname",)
     connection.commit()
     result = cursor.fetchall()
-    print "---LIST OF AVAILABLE SCHOOLS---"
+    print "\n---LIST OF AVAILABLE SCHOOLS---"
     for key in result:
         print key[0]
 
@@ -381,22 +372,17 @@ def find(school):
     school: The keywords related to school in question
     """
 
-    #logging.info("Retrieving all keywords")
     cursor = connection.cursor()
     cursor.execute("select * from slschools where campusname like %s",("%" + school + "%",)) #Remember this! Always a comma inside the brackets!
     connection.commit()
     result = cursor.fetchall()
     for key in result:
         print key[0]
- 
-@command
-
-
 
 def average():
     global connection
     cursor = connection.cursor()
-    cursor.execute("select avg (density) from slschools",)#How can I get it to populate the metric in question
+    cursor.execute("select avg(density) from slschools",)#How can I get it to populate the metric in question
     connection.commit()
     result = cursor.fetchone()
     print "The databse average is: %s"%int(result[0])
@@ -428,6 +414,7 @@ def highest():
     dens_num = dens_num1[0]
     print "The school in the database with the highest density is %s with %s"% (school, dens_num)
 
+
 #def
 
 def basic_density(school): #How do I specify an email?
@@ -438,8 +425,30 @@ def basic_density(school): #How do I specify an email?
     result = cursor.fetchone()
     print result[0]
 
+
+def topTenDensity():
+    cursor = connection.cursor()
+    cursor.execute("SELECT campusname, density FROM slschools ORDER BY density DESC LIMIT 10",) #
+    connection.commit()
+    result = cursor.fetchall()
+    print "\n---Here Are Your Top 10 Schools with the Highest Density!---\n" #%percentage
+    for key in result:
+        print key[0], key[1]
+
+def bottomTenDensity():
+    cursor = connection.cursor()
+    cursor.execute("select campusname, density from slschools order by density asc limit 10")
+    connection.commit()
+    result = cursor.fetchall()
+    print "\n---Here Are Your Bottom 10 Schools with the Lowest Density!---\n" #%percentage
+    for key in result:
+        print key[0], key[1]
+
+
+
 if __name__ == "__main__":
     clize.run(commands)
 	
 #Email: sightlinespython@gmail.com, password: Meat4848
 #Cheyney University of PA - Lump Sum
+""     
