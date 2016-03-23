@@ -7,10 +7,13 @@
     -Making this less crowded...
     -How do I put a heading on the program within bash
         -Similar to how the ArgParser allows you to have an intro title
+    -Easy way to print the percentage sign...
     -The rankings command does not work for tech rating
-    -Is there a way to show a school's ranking? Row number?
+    -Is there a way to show a school's ranking in sql? Row number?
 
     -Talk about storyboarding outline
+
+    -Work on formatting the ranking output
 
     """
 import SightlinesClasses
@@ -89,7 +92,7 @@ def techrating(school, output=None, email=None, outputpeers =None, emaildoc=None
             connection.commit()
             rank = cursor.fetchall()
             for school in rank:
-                print school[0], school[1], school[2]
+                print "%s- %s, rank: %s"%(school[0], school[1], school[2])
         except TypeError:
             print "Not found! \nUse the catalog or find command to identify the correct name of your school"
 
@@ -238,7 +241,7 @@ def density(school, output=None, email=None, outputpeers =None, emaildoc=None, r
             connection.commit()
             rank = cursor.fetchall()
             for school in rank:
-                print school[0], school[1], school[2]
+                print "%s- %s, rank: %s"%(school[0], school[1], school[2])
         except TypeError:
          print "Not found! \nUse the catalog or find command to identify the correct name of your school"
 
@@ -438,9 +441,7 @@ def bottomTenDensity():
 
 
 
-if __name__ == "__main__":
-    clize.run(commands)
 	
-#Email: sightlinespython@gmail.com, password: Meat4848
+
 #Cheyney University of PA - Lump Sum
 ""     
